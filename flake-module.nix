@@ -152,6 +152,16 @@ toplevel @ {
   };
   builderOptionType = types.submodule {
     options = {
+      nixos = mkOption {
+        type = types.functionTo types.attrs;
+        default = cfg.nixpkgs.nixpkgs.lib.nixosSystem;
+        defaultText = literalExpression ''
+          lite-config.nixpkgs.nixpkgs.lib.nixosSystem
+        '';
+        description = ''
+          The builder function for nixos system.
+        '';
+      };
       darwin = mkOption {
         type = types.functionTo types.attrs;
         default = inputs.nix-darwin.lib.darwinSystem;
@@ -310,7 +320,7 @@ toplevel @ {
     in
       if hostPlatform.isLinux
       then {
-        nixosConfigurations.${hostName} = cfg.nixpkgs.nixpkgs.lib.nixosSystem builderArgs;
+        nixosConfigurations.${hostName} = cfg.builder.nixos builderArgs;
       }
       else if hostPlatform.isDarwin
       then {darwinConfigurations.${hostName} = cfg.builder.darwin builderArgs;}
