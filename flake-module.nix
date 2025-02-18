@@ -299,6 +299,7 @@ toplevel @ {
             home-manager = {
               sharedModules = cfg.homeModules;
               useGlobalPkgs = true;
+              useUserPackages = true;
               extraSpecialArgs = specialArgs;
             };
           }
