@@ -53,6 +53,18 @@ toplevel @ {
             { allowUnfree = true; }
           '';
       };
+      patches = mkOption {
+        default = [];
+        type = types.listOf types.path;
+        description = ''
+          Patches to apply to nixpkgs source.
+        '';
+        example =
+          literalExpression
+          ''
+            [ ./fix-package.patch ]
+          '';
+      };
       perSystemOverrides = mkOption {
         default = {};
         type = types.attrsOf (types.submodule {
@@ -153,11 +165,8 @@ toplevel @ {
   builderOptionType = types.submodule {
     options = {
       nixos = mkOption {
-        type = types.functionTo types.attrs;
-        default = cfg.nixpkgs.nixpkgs.lib.nixosSystem;
-        defaultText = literalExpression ''
-          lite-config.nixpkgs.nixpkgs.lib.nixosSystem
-        '';
+        type = types.nullOr (types.functionTo types.attrs);
+        default = null;
         description = ''
           The builder function for nixos system.
         '';
@@ -277,7 +286,7 @@ toplevel @ {
   useHomeManager = cfg.homeModules != [] || cfg.homeConfigurations != {};
 
   makeSystemConfig = hostName: hostConfig:
-    withSystem hostConfig.system ({liteConfigPkgs, ...}: let
+    withSystem hostConfig.system ({liteConfigPkgs, liteConfigNixpkgs, ...}: let
       hostPlatform = liteConfigPkgs.stdenv.hostPlatform;
       hostModule =
         if hostConfig.hostModule == null
@@ -300,6 +309,9 @@ toplevel @ {
             nixpkgs.pkgs = liteConfigPkgs;
             networking.hostName = hostName;
           }
+          {
+            config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
+          }
         ]
         ++ cfg.systemModules
         ++ lib.optionals useHomeManager [
@@ -316,11 +328,17 @@ toplevel @ {
         ];
       builderArgs = {
         inherit specialArgs modules;
+        inherit (hostConfig) system;
       };
+      nixosSystem = import (liteConfigNixpkgs + "/nixos/lib/eval-config.nix");
     in
       if hostPlatform.isLinux
       then {
-        nixosConfigurations.${hostName} = cfg.builder.nixos builderArgs;
+        nixosConfigurations.${hostName} =
+          if (cfg.builder.nixos == null) then
+            nixosSystem builderArgs
+          else
+            cfg.builder.nixos;
       }
       else if hostPlatform.isDarwin
       then {darwinConfigurations.${hostName} = cfg.builder.darwin builderArgs;}
@@ -396,8 +414,16 @@ in {
     }: {
       _file = ./.;
       config = let
-        systemNixpkgs = cfg.nixpkgs.perSystemOverrides.${system} or cfg.nixpkgs;
-        selectedPkgs = import systemNixpkgs.nixpkgs {
+        systemConfig = cfg.nixpkgs.perSystemOverrides.${system} or cfg.nixpkgs;
+        systemNixpkgs = systemConfig.nixpkgs;
+        patchedNixpkgs = if cfg.nixpkgs.patches != [] then
+          (import systemNixpkgs { inherit system; }).applyPatches {
+            name = if systemNixpkgs ? shortRev then "nixpkgs-patched-${systemNixpkgs.shortRev}" else "nixpkgs-patched-dirty";
+            src = systemNixpkgs;
+            patches = cfg.nixpkgs.patches;
+          }
+        else systemNixpkgs;
+        selectedPkgs = import patchedNixpkgs {
           inherit system;
           overlays = cfg.nixpkgs.overlays;
           config = cfg.nixpkgs.config;
@@ -405,6 +431,7 @@ in {
       in {
         # Make this OptionDefault so that users are able to override this pkg.
         _module.args.liteConfigPkgs = lib.mkOptionDefault selectedPkgs;
+        _module.args.liteConfigNixpkgs = patchedNixpkgs;
 
         _module.args.pkgs = lib.mkIf cfg.nixpkgs.setPerSystemPkgs liteConfigPkgs;
 
