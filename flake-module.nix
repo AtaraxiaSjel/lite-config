@@ -280,6 +280,20 @@ toplevel @ {
             }
           '';
       };
+
+      extraSpecialArgs = mkOption {
+        default = {};
+        type = types.attrs;
+        description = ''
+          Extra specialArgs to pass to nixosConfigurations builder.
+          Flakes inputs passed by default.
+        '';
+        example =
+          literalExpression
+          ''
+            { inherit self; }
+          '';
+      };
     };
   };
 
@@ -300,7 +314,7 @@ toplevel @ {
         else throw "System type ${hostPlatform.system} not supported.";
       specialArgs = {
         inherit inputs hostPlatform;
-      };
+      } // cfg.extraSpecialArgs;
       modules =
         [
           hostModule
