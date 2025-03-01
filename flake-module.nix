@@ -431,7 +431,7 @@ in {
       in {
         # Make this OptionDefault so that users are able to override this pkg.
         _module.args.liteConfigPkgs = lib.mkOptionDefault selectedPkgs;
-        _module.args.liteConfigNixpkgs = patchedNixpkgs;
+        _module.args.liteConfigNixpkgs = lib.mkOptionDefault patchedNixpkgs;
 
         _module.args.pkgs = lib.mkIf cfg.nixpkgs.setPerSystemPkgs liteConfigPkgs;
 
