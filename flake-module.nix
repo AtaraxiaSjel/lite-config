@@ -325,6 +325,8 @@ toplevel @ {
           }
           {
             config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
+            config.nixpkgs.flake.setNixPath = true;
+            config.nixpkgs.flake.setFlakeRegistry = true;
           }
         ]
         ++ cfg.systemModules
