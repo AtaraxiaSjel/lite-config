@@ -160,6 +160,11 @@ toplevel @ {
           will be used as hostModule.
         '';
       };
+      useHomeManager = mkOption {
+        type = types.bool;
+        default = cfg.homeModules != [] || cfg.homeConfigurations != {};
+        description = "Activate home-manager for host ot not.";
+      };
     };
   };
   builderOptionType = types.submodule {
@@ -330,7 +335,7 @@ toplevel @ {
           }
         ]
         ++ cfg.systemModules
-        ++ lib.optionals useHomeManager [
+        ++ lib.optionals hostConfig.useHomeManager [
           homeManagerSystemModule
           {
             _file = ./.;
