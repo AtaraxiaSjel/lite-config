@@ -319,6 +319,7 @@ toplevel @ {
         else throw "System type ${hostPlatform.system} not supported.";
       specialArgs = {
         inherit inputs hostPlatform;
+        flake-nixpkgs = liteConfigNixpkgs;
       } // cfg.extraSpecialArgs;
       modules =
         [
