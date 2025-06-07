@@ -299,6 +299,15 @@ toplevel @ {
             { inherit self; }
           '';
       };
+
+      importDummyHomeManager = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Import dummy home-manager module to host if it does not import real home-manager.
+          Can be useful in some configurations.
+        '';
+      };
     };
   };
 
@@ -336,7 +345,7 @@ toplevel @ {
           }
         ]
         ++ cfg.systemModules
-        ++ lib.optionals hostConfig.useHomeManager [
+        ++ (if hostConfig.useHomeManager then [
           homeManagerSystemModule
           {
             _file = ./.;
@@ -347,7 +356,15 @@ toplevel @ {
               extraSpecialArgs = specialArgs;
             };
           }
-        ];
+        ] else if cfg.importDummyHomeManager then [
+          {
+            options.home-manager = mkOption {
+              type = types.attrs;
+              default = { };
+              description = "Dummy home-manager module";
+            };
+          }
+        ] else []);
       builderArgs = {
         inherit specialArgs modules;
         inherit (hostConfig) system;

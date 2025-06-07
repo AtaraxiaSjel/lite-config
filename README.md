@@ -3,7 +3,7 @@
 [![flakestry.dev](https://flakestry.dev/api/badge/flake/github/yelite/lite-config)](https://flakestry.dev/flake/github/yelite/lite-config/0.2.0)
 
 > [!NOTE]
-> lite-config is the new name of lite-system. This rename is to avoid confusion on the word 'system', 
+> lite-config is the new name of lite-system. This rename is to avoid confusion on the word 'system',
 > which is commonly used to refer to platform string, like "x86_64-linux", in context of Nix.
 
 `lite-config` offers a convinient appraoch to build NixOS, nix-darwin and Home Manager configurations,
@@ -125,7 +125,7 @@ have more complex tasks to accomplish within the flake.
 ```nix
 {
   outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} ({inputs, ...}: {
+    flake-parts.lib.mkFlake {inherit inputs;} ({self, inputs, ...}: {
       imports = [
         inputs.lite-config.flakeModule
       ];
@@ -198,6 +198,16 @@ have more complex tasks to accomplish within the flake.
             };
           };
         };
+
+        # Extra specialArgs to pass to nixosConfigurations builder.
+        # Flakes inputs passed by default.
+        extraSpecialArgs = {
+          flake-self = self;
+        };
+
+        # Import dummy home-manager module to host if it does not import real home-manager.
+        # Can be useful in some configurations.
+        importDummyHomeManager = true;
       };
     });
 }
