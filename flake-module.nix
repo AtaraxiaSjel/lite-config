@@ -1,33 +1,34 @@
-toplevel @ {
+toplevel@{
   inputs,
   lib,
   withSystem,
   ...
-}: let
-  inherit
-    (builtins)
-    listToAttrs
+}:
+let
+  inherit (builtins)
     attrNames
     attrValues
+    filter
     foldl'
     length
-    filter
+    listToAttrs
     ;
-  inherit
-    (lib)
-    mkIf
-    mkOption
-    mkDefault
-    mkMerge
-    mapAttrs
-    types
-    recursiveUpdateUntil
+  inherit (lib)
     isDerivation
     literalExpression
+    mapAttrs
+    mkDefault
+    mkIf
+    mkMerge
+    mkOption
+    recursiveUpdateUntil
+    types
     ;
   cfg = toplevel.config.lite-config;
 
-  overlayType = types.uniq (types.functionTo (types.functionTo (types.lazyAttrsOf types.unspecified)));
+  overlayType = types.uniq (
+    types.functionTo (types.functionTo (types.lazyAttrsOf types.unspecified))
+  );
   nixpkgsOptionType = types.submodule {
     options = {
       nixpkgs = mkOption {
@@ -42,55 +43,51 @@ toplevel @ {
         '';
       };
       config = mkOption {
-        default = {};
+        default = { };
         type = types.attrs;
         description = ''
           The configuration of the Nix Packages collection.
         '';
-        example =
-          literalExpression
-          ''
-            { allowUnfree = true; }
-          '';
+        example = literalExpression ''
+          { allowUnfree = true; }
+        '';
       };
       patches = mkOption {
-        default = [];
+        default = [ ];
         type = types.listOf types.path;
         description = ''
           Patches to apply to nixpkgs source.
         '';
-        example =
-          literalExpression
-          ''
-            [ ./fix-package.patch ]
-          '';
+        example = literalExpression ''
+          [ ./fix-package.patch ]
+        '';
       };
       perSystemOverrides = mkOption {
-        default = {};
-        type = types.attrsOf (types.submodule {
-          options = {
-            nixpkgs = mkOption {
-              type = types.path;
-              default = inputs.nixpkgs;
-              defaultText = literalExpression "inputs.nixpkgs";
-              description = ''
-                The nixpkgs flake to use for this system.
-              '';
-            };
-            config = mkOption {
-              default = {};
-              type = types.attrs;
-              description = ''
-                The configuration of the Nix Packages collection for this system.
-              '';
-              example =
-                literalExpression
-                ''
+        default = { };
+        type = types.attrsOf (
+          types.submodule {
+            options = {
+              nixpkgs = mkOption {
+                type = types.path;
+                default = inputs.nixpkgs;
+                defaultText = literalExpression "inputs.nixpkgs";
+                description = ''
+                  The nixpkgs flake to use for this system.
+                '';
+              };
+              config = mkOption {
+                default = { };
+                type = types.attrs;
+                description = ''
+                  The configuration of the Nix Packages collection for this system.
+                '';
+                example = literalExpression ''
                   { allowUnfree = true; }
                 '';
+              };
             };
-          };
-        });
+          }
+        );
         description = ''
           Overrides for the nixpkgs used in a particular system. Useful for choosing
           a pinned nixpkgs commit for some platform.
@@ -99,27 +96,23 @@ toplevel @ {
           Doing so will only deviate environments on your different machines, eventually
           making the system with pinned nixpkgs failed to build.
         '';
-        example =
-          literalExpression
-          ''
-            {
-              "aarch64-darwin" = inputs.nixpkgs-darwin;
-            }
-          '';
+        example = literalExpression ''
+          {
+            "aarch64-darwin" = inputs.nixpkgs-darwin;
+          }
+        '';
       };
       overlays = mkOption {
-        default = [];
+        default = [ ];
         type = types.listOf overlayType;
         description = ''
           List of overlays to use with the Nix Packages collection.
         '';
-        example =
-          literalExpression
-          ''
-            [
-              inputs.fenix.overlays.default
-            ]
-          '';
+        example = literalExpression ''
+          [
+            inputs.fenix.overlays.default
+          ]
+        '';
       };
       exportOverlayPackages = mkOption {
         default = true;
@@ -145,11 +138,9 @@ toplevel @ {
         description = ''
           The system of the host.
         '';
-        example =
-          literalExpression
-          ''
-            "x86_64-linux"
-          '';
+        example = literalExpression ''
+          "x86_64-linux"
+        '';
       };
       hostModule = mkOption {
         type = types.nullOr types.deferredModule;
@@ -162,7 +153,7 @@ toplevel @ {
       };
       useHomeManager = mkOption {
         type = types.bool;
-        default = cfg.homeModules != [] || cfg.homeConfigurations != {};
+        default = cfg.homeModules != [ ] || cfg.homeConfigurations != { };
         description = "Activate home-manager for host ot not.";
       };
     };
@@ -193,7 +184,7 @@ toplevel @ {
     options = {
       nixpkgs = mkOption {
         type = nixpkgsOptionType;
-        default = {};
+        default = { };
         description = ''
           Config about the nixpkgs used by lite-config.
           All configurations produced by lite-config will use the nixpkgs specified in this option.
@@ -202,7 +193,7 @@ toplevel @ {
 
       hosts = mkOption {
         type = types.attrsOf hostConfigType;
-        default = {};
+        default = { };
         description = ''
           Host configurations.
         '';
@@ -210,7 +201,7 @@ toplevel @ {
 
       systemModules = mkOption {
         type = types.listOf types.deferredModule;
-        default = [];
+        default = [ ];
         description = ''
           Shared system modules (NixOS or nix-darwin) to be imported by all hosts.
         '';
@@ -218,7 +209,7 @@ toplevel @ {
 
       homeModules = mkOption {
         type = types.listOf types.deferredModule;
-        default = [];
+        default = [ ];
         description = ''
           Home manager modules to be imported by all hosts.
         '';
@@ -238,7 +229,7 @@ toplevel @ {
 
       builder = mkOption {
         type = builderOptionType;
-        default = {};
+        default = { };
         description = ''
           Options about system configuration builder.
 
@@ -263,7 +254,7 @@ toplevel @ {
 
       homeConfigurations = mkOption {
         type = types.attrsOf types.deferredModule;
-        default = {};
+        default = { };
         description = ''
           Per-user Home Manager module used for exporting homeConfigurations to be used
           by systems other than NixOS and nix-darwin.
@@ -273,31 +264,27 @@ toplevel @ {
 
           This has no effect if {option}`lite-config.homeModules` is empty.
         '';
-        example =
-          literalExpression
-          ''
-            {
-              joe = {
-                myConfig = {
-                  neovim.enable = true;
-                };
+        example = literalExpression ''
+          {
+            joe = {
+              myConfig = {
+                neovim.enable = true;
               };
-            }
-          '';
+            };
+          }
+        '';
       };
 
       extraSpecialArgs = mkOption {
-        default = {};
+        default = { };
         type = types.attrs;
         description = ''
           Extra specialArgs to pass to nixosConfigurations builder.
           Flakes inputs passed by default.
         '';
-        example =
-          literalExpression
-          ''
-            { inherit self; }
-          '';
+        example = literalExpression ''
+          { inherit self; }
+        '';
       };
 
       importDummyHomeManager = mkOption {
@@ -311,112 +298,131 @@ toplevel @ {
     };
   };
 
-  useHomeManager = cfg.homeModules != [] || cfg.homeConfigurations != {};
+  useHomeManager = cfg.homeModules != [ ] || cfg.homeConfigurations != { };
 
-  makeSystemConfig = hostName: hostConfig:
-    withSystem hostConfig.system ({liteConfigPkgs, liteConfigNixpkgs, ...}: let
-      hostPlatform = liteConfigPkgs.stdenv.hostPlatform;
-      hostModule =
-        if hostConfig.hostModule == null
-        then "${cfg.hostModuleDir}/${hostName}"
-        else hostConfig.hostModule;
-      homeManagerSystemModule =
-        if hostPlatform.isLinux
-        then cfg.homeManagerFlake.nixosModules.default
-        else if hostPlatform.isDarwin
-        then cfg.homeManagerFlake.darwinModules.default
-        else throw "System type ${hostPlatform.system} not supported.";
-      specialArgs = {
-        inherit inputs hostPlatform;
-        flake-nixpkgs = liteConfigNixpkgs;
-      } // cfg.extraSpecialArgs;
-      modules =
-        [
-          hostModule
-          {
-            _file = ./.;
-            nixpkgs.pkgs = liteConfigPkgs;
-            networking.hostName = hostName;
-          }
-          {
-            config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
-            config.nixpkgs.flake.setNixPath = true;
-            config.nixpkgs.flake.setFlakeRegistry = true;
-          }
-        ]
-        ++ cfg.systemModules
-        ++ (if hostConfig.useHomeManager then [
-          homeManagerSystemModule
-          {
-            _file = ./.;
-            home-manager = {
-              sharedModules = cfg.homeModules;
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              extraSpecialArgs = specialArgs;
-            };
-          }
-        ] else if cfg.importDummyHomeManager then [
-          {
-            options.home-manager = mkOption {
-              type = types.attrs;
-              default = { };
-              description = "Dummy home-manager module";
-            };
-          }
-        ] else []);
-      builderArgs = {
-        inherit specialArgs modules;
-        inherit (hostConfig) system;
-      };
-      nixosSystem = import (liteConfigNixpkgs + "/nixos/lib/eval-config.nix");
-    in
-      if hostPlatform.isLinux
-      then {
-        nixosConfigurations.${hostName} =
-          if (cfg.builder.nixos == null) then
-            nixosSystem builderArgs
+  makeSystemConfig =
+    hostName: hostConfig:
+    withSystem hostConfig.system (
+      { liteConfigPkgs, liteConfigNixpkgs, ... }:
+      let
+        hostPlatform = liteConfigPkgs.stdenv.hostPlatform;
+        hostModule =
+          if hostConfig.hostModule == null then "${cfg.hostModuleDir}/${hostName}" else hostConfig.hostModule;
+        homeManagerSystemModule =
+          if hostPlatform.isLinux then
+            cfg.homeManagerFlake.nixosModules.default
+          else if hostPlatform.isDarwin then
+            cfg.homeManagerFlake.darwinModules.default
           else
-            cfg.builder.nixos;
-      }
-      else if hostPlatform.isDarwin
-      then {darwinConfigurations.${hostName} = cfg.builder.darwin builderArgs;}
-      else throw "System type ${hostPlatform.system} not supported.");
-  systemAttrset = let
-    # Merge the first two levels
-    mergeSysConfig = a: b: recursiveUpdateUntil (path: _: _: (length path) > 2) a b;
-    sysConfigAttrsets = attrValues (mapAttrs makeSystemConfig cfg.hosts);
-  in
-    foldl' mergeSysConfig {} sysConfigAttrsets;
+            throw "System type ${hostPlatform.system} not supported.";
+        specialArgs = {
+          inherit inputs hostPlatform;
+          flake-nixpkgs = liteConfigNixpkgs;
+        } // cfg.extraSpecialArgs;
+        modules =
+          [
+            hostModule
+            {
+              _file = ./.;
+              nixpkgs.pkgs = liteConfigPkgs;
+              networking.hostName = hostName;
+            }
+            {
+              config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
+              config.nixpkgs.flake.setNixPath = true;
+              config.nixpkgs.flake.setFlakeRegistry = true;
+            }
+          ]
+          ++ cfg.systemModules
+          ++ (
+            if hostConfig.useHomeManager then
+              [
+                homeManagerSystemModule
+                {
+                  _file = ./.;
+                  home-manager = {
+                    sharedModules = cfg.homeModules;
+                    useGlobalPkgs = true;
+                    useUserPackages = true;
+                    extraSpecialArgs = specialArgs;
+                  };
+                }
+              ]
+            else if cfg.importDummyHomeManager then
+              [
+                {
+                  options.home-manager = mkOption {
+                    type = types.attrs;
+                    default = { };
+                    description = "Dummy home-manager module";
+                  };
+                }
+              ]
+            else
+              [ ]
+          );
+        builderArgs = {
+          inherit specialArgs modules;
+          inherit (hostConfig) system;
+        };
+        nixosSystem = import (liteConfigNixpkgs + "/nixos/lib/eval-config.nix");
+      in
+      if hostPlatform.isLinux then
+        {
+          nixosConfigurations.${hostName} =
+            if (cfg.builder.nixos == null) then nixosSystem builderArgs else cfg.builder.nixos;
+        }
+      else if hostPlatform.isDarwin then
+        { darwinConfigurations.${hostName} = cfg.builder.darwin builderArgs; }
+      else
+        throw "System type ${hostPlatform.system} not supported."
+    );
+  systemAttrset =
+    let
+      # Merge the first two levels
+      mergeSysConfig =
+        a: b:
+        recursiveUpdateUntil (
+          path: _: _:
+          (length path) > 2
+        ) a b;
+      sysConfigAttrsets = attrValues (mapAttrs makeSystemConfig cfg.hosts);
+    in
+    foldl' mergeSysConfig { } sysConfigAttrsets;
 
-  mkHomeConfiguration = pkgs: username: module:
+  mkHomeConfiguration =
+    pkgs: username: module:
     cfg.homeManagerFlake.lib.homeManagerConfiguration {
       inherit pkgs;
-      modules =
-        [
-          module
-          ({config, ...}: let
+      modules = [
+        module
+        (
+          { config, ... }:
+          let
             hostPlatform = pkgs.stdenv.hostPlatform;
             defaultHome =
-              if hostPlatform.isLinux
-              then "/home/${config.home.username}"
-              else if hostPlatform.isDarwin
-              then "/Users/${config.home.username}"
-              else throw "System type ${hostPlatform.system} not supported.";
-          in {
+              if hostPlatform.isLinux then
+                "/home/${config.home.username}"
+              else if hostPlatform.isDarwin then
+                "/Users/${config.home.username}"
+              else
+                throw "System type ${hostPlatform.system} not supported.";
+          in
+          {
             _file = ./.;
             home.username = mkDefault username;
             home.homeDirectory = mkDefault defaultHome;
-          })
-        ]
-        ++ cfg.homeModules;
+          }
+        )
+      ] ++ cfg.homeModules;
 
       extraSpecialArgs = {
         inherit inputs;
         hostPlatform = pkgs.stdenv.hostPlatform;
       };
     };
-  createHomeConfigurations = pkgs:
+  createHomeConfigurations =
+    pkgs:
     pkgs.stdenv.mkDerivation {
       name = "homeConfigurations";
       version = "1.0";
@@ -429,11 +435,12 @@ toplevel @ {
       '';
       passthru = mapAttrs (mkHomeConfiguration pkgs) cfg.homeConfigurations;
     };
-in {
+in
+{
   options = {
     lite-config = mkOption {
       type = liteConfigType;
-      default = {};
+      default = { };
       description = ''
         The config for lite-config.
       '';
@@ -446,65 +453,75 @@ in {
 
     flake = systemAttrset;
 
-    perSystem = {
-      system,
-      liteConfigPkgs,
-      ...
-    }: {
-      _file = ./.;
-      config = let
-        systemConfig = cfg.nixpkgs.perSystemOverrides.${system} or cfg.nixpkgs;
-        systemNixpkgs = systemConfig.nixpkgs;
-        patchedNixpkgs = if cfg.nixpkgs.patches != [] then
-          (import systemNixpkgs { inherit system; }).applyPatches {
-            name = if systemNixpkgs ? shortRev then "nixpkgs-patched-${systemNixpkgs.shortRev}" else "nixpkgs-patched-dirty";
-            src = systemNixpkgs;
-            patches = cfg.nixpkgs.patches;
-          }
-        else systemNixpkgs;
-        selectedPkgs = import patchedNixpkgs {
-          inherit system;
-          overlays = cfg.nixpkgs.overlays;
-          config = cfg.nixpkgs.config;
-        };
-      in {
-        # Make this OptionDefault so that users are able to override this pkg.
-        _module.args.liteConfigPkgs = lib.mkOptionDefault selectedPkgs;
-        _module.args.liteConfigNixpkgs = lib.mkOptionDefault patchedNixpkgs;
-
-        _module.args.pkgs = lib.mkIf cfg.nixpkgs.setPerSystemPkgs liteConfigPkgs;
-
-        packages = let
-          overlayPackages = let
-            overlayFn = lib.composeManyExtensions liteConfigPkgs.overlays;
-            overlayPackageNames =
-              # Here we use the final pkgs as both prev and final arg for the overlay function.
-              # This should be fine because we only care about attr names.
-              attrNames (overlayFn liteConfigPkgs liteConfigPkgs);
-            overlayPackageEntries =
-              map (name: {
-                inherit name;
-                value = liteConfigPkgs.${name} or null;
-              })
-              overlayPackageNames;
-            # Some overlay provides non-derivation at the top level, which
-            # breaks `nix flake show`. Those packages are usually not interesting
-            # from system configuration's perspective. Therefore they are filtered
-            # out.
-            validOverlayPackageEntries = filter (e: isDerivation e.value) overlayPackageEntries;
+    perSystem =
+      {
+        system,
+        liteConfigPkgs,
+        ...
+      }:
+      {
+        _file = ./.;
+        config =
+          let
+            systemConfig = cfg.nixpkgs.perSystemOverrides.${system} or cfg.nixpkgs;
+            systemNixpkgs = systemConfig.nixpkgs;
+            patchedNixpkgs =
+              if cfg.nixpkgs.patches != [ ] then
+                (import systemNixpkgs { inherit system; }).applyPatches {
+                  name =
+                    if systemNixpkgs ? shortRev then
+                      "nixpkgs-patched-${systemNixpkgs.shortRev}"
+                    else
+                      "nixpkgs-patched-dirty";
+                  src = systemNixpkgs;
+                  patches = cfg.nixpkgs.patches;
+                }
+              else
+                systemNixpkgs;
+            selectedPkgs = import patchedNixpkgs {
+              inherit system;
+              overlays = cfg.nixpkgs.overlays;
+              config = cfg.nixpkgs.config;
+            };
           in
-            listToAttrs validOverlayPackageEntries;
+          {
+            # Make this OptionDefault so that users are able to override this pkg.
+            _module.args.liteConfigPkgs = lib.mkOptionDefault selectedPkgs;
+            _module.args.liteConfigNixpkgs = lib.mkOptionDefault patchedNixpkgs;
 
-          homeManagerPackages = {
-            home-manager = cfg.homeManagerFlake.packages.${system}.default;
-            homeConfigurations = createHomeConfigurations liteConfigPkgs;
+            _module.args.pkgs = lib.mkIf cfg.nixpkgs.setPerSystemPkgs liteConfigPkgs;
+
+            packages =
+              let
+                overlayPackages =
+                  let
+                    overlayFn = lib.composeManyExtensions liteConfigPkgs.overlays;
+                    overlayPackageNames =
+                      # Here we use the final pkgs as both prev and final arg for the overlay function.
+                      # This should be fine because we only care about attr names.
+                      attrNames (overlayFn liteConfigPkgs liteConfigPkgs);
+                    overlayPackageEntries = map (name: {
+                      inherit name;
+                      value = liteConfigPkgs.${name} or null;
+                    }) overlayPackageNames;
+                    # Some overlay provides non-derivation at the top level, which
+                    # breaks `nix flake show`. Those packages are usually not interesting
+                    # from system configuration's perspective. Therefore they are filtered
+                    # out.
+                    validOverlayPackageEntries = filter (e: isDerivation e.value) overlayPackageEntries;
+                  in
+                  listToAttrs validOverlayPackageEntries;
+
+                homeManagerPackages = {
+                  home-manager = cfg.homeManagerFlake.packages.${system}.default;
+                  homeConfigurations = createHomeConfigurations liteConfigPkgs;
+                };
+              in
+              mkMerge [
+                (mkIf cfg.nixpkgs.exportOverlayPackages overlayPackages)
+                (mkIf useHomeManager homeManagerPackages)
+              ];
           };
-        in
-          mkMerge [
-            (mkIf cfg.nixpkgs.exportOverlayPackages overlayPackages)
-            (mkIf useHomeManager homeManagerPackages)
-          ];
       };
-    };
   };
 }
