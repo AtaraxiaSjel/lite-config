@@ -317,6 +317,7 @@ let
             throw "System type ${hostPlatform.system} not supported.";
         specialArgs = {
           inherit inputs hostPlatform;
+          inherit (hostConfig) useHomeManager;
           flake-nixpkgs = liteConfigNixpkgs;
         } // cfg.extraSpecialArgs;
         modules =
