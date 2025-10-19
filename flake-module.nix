@@ -1,3 +1,4 @@
+{ applyPatches }:
 toplevel@{
   inputs,
   lib,
@@ -25,6 +26,9 @@ let
     types
     ;
   cfg = toplevel.config.lite-config;
+
+  # Stronger than mkDefault (1000), weaker than mkForce (50) and the "default override priority".
+  mkPreferable = lib.mkOverride 750;
 
   overlayType = types.uniq (
     types.functionTo (types.functionTo (types.lazyAttrsOf types.unspecified))
@@ -319,49 +323,50 @@ let
           inherit inputs hostPlatform;
           inherit (hostConfig) useHomeManager;
           flake-nixpkgs = liteConfigNixpkgs;
-        } // cfg.extraSpecialArgs;
-        modules =
-          [
-            hostModule
-            {
-              _file = ./.;
-              nixpkgs.pkgs = liteConfigPkgs;
-              networking.hostName = hostName;
-            }
-            {
-              config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
-              config.nixpkgs.flake.setNixPath = true;
-              config.nixpkgs.flake.setFlakeRegistry = true;
-            }
-          ]
-          ++ cfg.systemModules
-          ++ (
-            if hostConfig.useHomeManager then
-              [
-                homeManagerSystemModule
-                {
-                  _file = ./.;
-                  home-manager = {
-                    sharedModules = cfg.homeModules;
-                    useGlobalPkgs = true;
-                    useUserPackages = true;
-                    extraSpecialArgs = specialArgs;
-                  };
-                }
-              ]
-            else if cfg.importDummyHomeManager then
-              [
-                {
-                  options.home-manager = mkOption {
-                    type = types.attrs;
-                    default = { };
-                    description = "Dummy home-manager module";
-                  };
-                }
-              ]
-            else
-              [ ]
-          );
+        }
+        // cfg.extraSpecialArgs;
+        modules = [
+          hostModule
+          {
+            _file = ./.;
+            nixpkgs.pkgs = liteConfigPkgs;
+            networking.hostName = hostName;
+          }
+          {
+            config.nix.registry.nixpkgs.flake = mkPreferable liteConfigNixpkgs;
+            config.nixpkgs.flake.source = liteConfigNixpkgs.outPath;
+            config.nixpkgs.flake.setNixPath = true;
+            config.nixpkgs.flake.setFlakeRegistry = true;
+          }
+        ]
+        ++ cfg.systemModules
+        ++ (
+          if hostConfig.useHomeManager then
+            [
+              homeManagerSystemModule
+              {
+                _file = ./.;
+                home-manager = {
+                  sharedModules = cfg.homeModules;
+                  useGlobalPkgs = true;
+                  useUserPackages = true;
+                  extraSpecialArgs = specialArgs;
+                };
+              }
+            ]
+          else if cfg.importDummyHomeManager then
+            [
+              {
+                options.home-manager = mkOption {
+                  type = types.attrs;
+                  default = { };
+                  description = "Dummy home-manager module";
+                };
+              }
+            ]
+          else
+            [ ]
+        );
         builderArgs = {
           inherit specialArgs modules;
           inherit (hostConfig) system;
@@ -415,7 +420,8 @@ let
             home.homeDirectory = mkDefault defaultHome;
           }
         )
-      ] ++ cfg.homeModules;
+      ]
+      ++ cfg.homeModules;
 
       extraSpecialArgs = {
         inherit inputs;
@@ -466,19 +472,16 @@ in
           let
             systemConfig = cfg.nixpkgs.perSystemOverrides.${system} or cfg.nixpkgs;
             systemNixpkgs = systemConfig.nixpkgs;
-            patchedNixpkgs =
-              if cfg.nixpkgs.patches != [ ] then
-                (import systemNixpkgs { inherit system; }).applyPatches {
-                  name =
-                    if systemNixpkgs ? shortRev then
-                      "nixpkgs-patched-${systemNixpkgs.shortRev}"
-                    else
-                      "nixpkgs-patched-dirty";
-                  src = systemNixpkgs;
-                  patches = cfg.nixpkgs.patches;
-                }
-              else
-                systemNixpkgs;
+            patchedNixpkgs = applyPatches {
+              pkgs = systemNixpkgs.legacyPackages.${system};
+              name =
+                if systemNixpkgs ? shortRev then
+                  "nixpkgs-patched-${systemNixpkgs.shortRev}"
+                else
+                  "nixpkgs-patched-src";
+              src = systemNixpkgs;
+              patches = cfg.nixpkgs.patches;
+            };
             selectedPkgs = import patchedNixpkgs {
               inherit system;
               overlays = cfg.nixpkgs.overlays;
