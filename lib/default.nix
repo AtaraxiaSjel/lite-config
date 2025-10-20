@@ -70,8 +70,5 @@
           };
         };
     in
-    if numOfPatches == 0 then
-      lib.trace "applyPatches: skipping ${name}, no patches" src
-    else
-      lib.trace "applyPatches: creating ${name}, number of patches: ${toString numOfPatches}" patchedFlake;
+    if numOfPatches == 0 then src else patchedFlake;
 }
